@@ -1,87 +1,81 @@
 "use client";
-
-import { motion } from "framer-motion";
-import { Flame, TrendingUp } from "lucide-react";
+ 
+import { Flame, MoreHorizontal, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
+ 
 interface HabitCardProps {
-  title: string;
+  name: string;
+  emoji: string;
   streak: number;
-  progress: number;
-  target: number;
-  color?: string;
-  emoji?: string;
+  progress: number; // 0–100
+  completed: boolean;
+  color: string; // tailwind gradient classes
+  onToggle?: () => void;
 }
-
-export function HabitCard({
-  title,
+ 
+export default function HabitCard({
+  name,
+  emoji,
   streak,
   progress,
-  target,
-  color = "#6366F1",
-  emoji = "💪",
+  completed,
+  color,
+  onToggle,
 }: HabitCardProps) {
-  const pct = Math.min(Math.round((progress / target) * 100), 100);
-
   return (
-    <motion.div
-      whileHover={{ y: -2, transition: { duration: 0.2 } }}
-      className="group p-5 bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl hover:shadow-lg hover:border-[var(--primary)]/20 transition-all duration-300"
+    <div
+      className={cn(
+        "bg-white dark:bg-[#111827] rounded-2xl p-5 border border-gray-100 dark:border-gray-800",
+        "shadow-sm hover:shadow-md transition-all duration-200 group"
+      )}
     >
-      {/* Header */}
+      {/* Top row */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-sm"
-            style={{ backgroundColor: `${color}15` }}
-          >
+          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-xl", color)}>
             {emoji}
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-[var(--foreground)]">{title}</h3>
-            <p className="text-xs text-[var(--muted)] mt-0.5">
-              {progress} / {target} days
-            </p>
+            <p className="font-semibold text-[15px] text-gray-900 dark:text-white">{name}</p>
+            <div className="flex items-center gap-1 mt-0.5">
+              <Flame size={13} className="text-orange-400" />
+              <span className="text-xs text-gray-500 dark:text-gray-400">{streak} day streak</span>
+            </div>
           </div>
         </div>
-
-        {/* Streak Badge */}
-        <div
-          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
-          style={{ backgroundColor: `${color}15`, color }}
-        >
-          <Flame className="w-3 h-3" />
-          {streak}d
+        <button className="opacity-0 group-hover:opacity-100 p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400">
+          <MoreHorizontal size={16} />
+        </button>
+      </div>
+ 
+      {/* Progress bar */}
+      <div className="mb-3">
+        <div className="flex justify-between items-center mb-1.5">
+          <span className="text-xs text-gray-400">Today's progress</span>
+          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{progress}%</span>
+        </div>
+        <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
-
-      {/* Progress Bar */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-[var(--muted)]">Progress</span>
-          <span className="font-semibold" style={{ color }}>
-            {pct}%
-          </span>
-        </div>
-        <div className="w-full h-2.5 bg-[var(--border)] rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${pct}%` }}
-            transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
-            className="h-full rounded-full relative overflow-hidden"
-            style={{ backgroundColor: color }}
-          >
-            {/* Shimmer */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-4 flex items-center gap-1 text-xs text-green-500">
-        <TrendingUp className="w-3.5 h-3.5" />
-        <span>On track — keep it up!</span>
-      </div>
-    </motion.div>
+ 
+      {/* Complete button */}
+      <button
+        onClick={onToggle}
+        className={cn(
+          "w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-medium transition-all duration-150",
+          completed
+            ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400"
+            : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-[#6366F1]"
+        )}
+      >
+        <CheckCircle2 size={15} />
+        {completed ? "Completed!" : "Mark complete"}
+      </button>
+    </div>
   );
 }
+ 
