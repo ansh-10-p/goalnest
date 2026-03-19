@@ -1,6 +1,6 @@
 "use client";
  
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Search, Sun, Moon, Menu, ChevronDown, LogOut, User, CreditCard, Settings } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -11,8 +11,13 @@ interface DashboardNavbarProps {
  
 export default function DashboardNavbar({ onMenuToggle }: DashboardNavbarProps) {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
  
   const notifications = [
     { id: 1, text: "Morning run streak: 7 days! 🔥", time: "2m ago", unread: true },
@@ -45,13 +50,17 @@ export default function DashboardNavbar({ onMenuToggle }: DashboardNavbarProps) 
       </div>
  
       <div className="flex items-center gap-2 ml-auto">
-        {/* Theme toggle */}
+        {/* Theme toggle — rendered only after mount to avoid SSR/client mismatch */}
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition"
           aria-label="Toggle theme"
         >
-          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          {mounted ? (
+            theme === "dark" ? <Sun size={18} /> : <Moon size={18} />
+          ) : (
+            <Moon size={18} />  
+          )}
         </button>
  
         {/* Notification bell */}
@@ -132,4 +141,3 @@ export default function DashboardNavbar({ onMenuToggle }: DashboardNavbarProps) 
     </header>
   );
 }
- 
