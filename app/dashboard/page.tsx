@@ -1,61 +1,75 @@
 "use client";
- 
-import { useState } from "react";
-import { Flame, CheckSquare, Target, Zap, Plus } from "lucide-react";
+
+import { useState, useEffect } from "react";
+import { Flame, CheckSquare, Target, Zap, Plus, Loader2 } from "lucide-react";
 import HabitCard from "@/components/dashboard/habit-card";
 import GoalCard from "@/components/dashboard/goal-card";
 import AnalyticsCard from "@/components/dashboard/analytics-card";
 import ActivityFeed from "@/components/dashboard/activity-feed";
- 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
- 
-const habits = [
-  { id: "1", name: "Morning Run", emoji: "🏃", streak: 12, progress: 100, completed: true, color: "bg-orange-50 dark:bg-orange-900/20" },
-  { id: "2", name: "Read 30 mins", emoji: "📚", streak: 7, progress: 65, completed: false, color: "bg-blue-50 dark:bg-blue-900/20" },
-  { id: "3", name: "Meditate", emoji: "🧘", streak: 21, progress: 100, completed: true, color: "bg-violet-50 dark:bg-violet-900/20" },
-  { id: "4", name: "Drink 8 glasses", emoji: "💧", streak: 5, progress: 50, completed: false, color: "bg-cyan-50 dark:bg-cyan-900/20" },
-  { id: "5", name: "Journaling", emoji: "✍️", streak: 3, progress: 80, completed: false, color: "bg-pink-50 dark:bg-pink-900/20" },
-  { id: "6", name: "Cold Shower", emoji: "🚿", streak: 9, progress: 0, completed: false, color: "bg-teal-50 dark:bg-teal-900/20" },
-];
- 
-const goals = [
-  { id: "1", title: "Read 12 books this year", description: "Expand knowledge across business, philosophy, and fiction genres.", percentage: 75, daysLeft: 92, category: "Learning", color: "indigo" as const },
-  { id: "2", title: "Run a half marathon", description: "Build up mileage progressively and complete the 21km race.", percentage: 42, daysLeft: 60, category: "Fitness", color: "violet" as const },
-  { id: "3", title: "Save ₹2L emergency fund", description: "Build financial safety net with consistent monthly contributions.", percentage: 88, daysLeft: 14, category: "Finance", color: "emerald" as const },
-  { id: "4", title: "Launch side project", description: "Build and ship the SaaS MVP by end of quarter.", percentage: 33, daysLeft: 45, category: "Career", color: "amber" as const },
-];
- 
-const weeklyProductivity = [
-  { day: "Mon", value: 6 },
-  { day: "Tue", value: 8 },
-  { day: "Wed", value: 5 },
-  { day: "Thu", value: 9 },
-  { day: "Fri", value: 10 },
-  { day: "Sat", value: 7 },
-  { day: "Sun", value: 4 },
-];
- 
-const weeklyHabits = [
-  { day: "Mon", value: 4 },
-  { day: "Tue", value: 5 },
-  { day: "Wed", value: 3 },
-  { day: "Thu", value: 6 },
-  { day: "Fri", value: 6 },
-  { day: "Sat", value: 5 },
-  { day: "Sun", value: 2 },
-];
- 
-const activities = [
-  { id: "1", type: "habit_complete" as const, title: "Completed Morning Run", description: "Day 12 in a row — you're on fire!", time: "Today, 7:14 AM" },
-  { id: "2", type: "streak" as const, title: "21-day Meditation streak", description: "Three weeks of consistent mindfulness.", time: "Today, 6:45 AM" },
-  { id: "3", type: "goal_milestone" as const, title: "Book goal 75% complete", description: "9 of 12 books read this year.", time: "Yesterday, 10:30 PM" },
-  { id: "4", type: "achievement" as const, title: "Earned 'Iron Will' badge", description: "Completed all habits for 7 consecutive days.", time: "Yesterday, 11:59 PM" },
-  { id: "5", type: "progress" as const, title: "Emergency fund goal updated", description: "Progress jumped to 88% after monthly saving.", time: "2 days ago" },
-];
- 
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Habit {
+  id: string;
+  name: string;
+  emoji: string;
+  color: string;
+  streak: number;
+  progress: number;
+  completed: boolean;
+}
+
+interface Goal {
+  id: string;
+  title: string;
+  description: string;
+  percentage: number;
+  daysLeft: number;
+  category: string;
+  color: "indigo" | "violet" | "emerald" | "amber";
+}
+
+interface Activity {
+  id: string;
+  type: "habit_complete" | "streak" | "goal_milestone" | "achievement" | "progress";
+  title: string;
+  description: string;
+  time: string;
+}
+
+interface DashboardData {
+  user: { name: string };
+  stats: {
+    bestStreak: number;
+    bestStreakHabit: string;
+    completedToday: number;
+    totalHabits: number;
+    activeGoals: number;
+    closeToCompletion: number;
+  };
+  habits: Habit[];
+  goals: Goal[];
+  analytics: {
+    weeklyHabits: { day: string; value: number }[];
+  };
+  activities: Activity[];
+}
+
 // ─── Stat Card ────────────────────────────────────────────────────────────────
- 
-function StatCard({ icon: Icon, label, value, sub, iconBg }: { icon: React.ElementType; label: string; value: string; sub: string; iconBg: string }) {
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  iconBg,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  sub: string;
+  iconBg: string;
+}) {
   return (
     <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200">
       <div className="flex items-center justify-between mb-3">
@@ -69,10 +83,18 @@ function StatCard({ icon: Icon, label, value, sub, iconBg }: { icon: React.Eleme
     </div>
   );
 }
- 
+
 // ─── Section Header ───────────────────────────────────────────────────────────
- 
-function SectionHeader({ title, actionLabel, onAction }: { title: string; actionLabel?: string; onAction?: () => void }) {
+
+function SectionHeader({
+  title,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
   return (
     <div className="flex items-center justify-between mb-4">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
@@ -88,110 +110,181 @@ function SectionHeader({ title, actionLabel, onAction }: { title: string; action
     </div>
   );
 }
- 
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
- 
+
 export default function DashboardPage() {
-  const [habitStates, setHabitStates] = useState<Record<string, boolean>>(
-    Object.fromEntries(habits.map((h) => [h.id, h.completed]))
-  );
- 
-  const completedCount = Object.values(habitStates).filter(Boolean).length;
-  const totalHabits = habits.length;
- 
-  const toggleHabit = (id: string) =>
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [habitStates, setHabitStates] = useState<Record<string, boolean>>({});
+
+  // Fetch dashboard data
+  useEffect(() => {
+    async function fetchDashboard() {
+      try {
+        const res = await fetch("/api/dashboard");
+        if (!res.ok) throw new Error("Failed to load dashboard.");
+        const json: DashboardData = await res.json();
+        setData(json);
+        setHabitStates(
+          Object.fromEntries(json.habits.map((h) => [h.id, h.completed]))
+        );
+      } catch (err: any) {
+        setError(err.message ?? "Something went wrong.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDashboard();
+  }, []);
+
+  // Toggle habit and sync with backend
+  const toggleHabit = async (id: string) => {
+    // Optimistic update
     setHabitStates((prev) => ({ ...prev, [id]: !prev[id] }));
- 
+
+    try {
+      const res = await fetch(`/api/habits/${id}/toggle`, { method: "PATCH" });
+      if (!res.ok) {
+        // Revert on failure
+        setHabitStates((prev) => ({ ...prev, [id]: !prev[id] }));
+      } else {
+        // Refresh activity feed silently
+        const dashRes = await fetch("/api/dashboard");
+        if (dashRes.ok) {
+          const updated: DashboardData = await dashRes.json();
+          setData((prev) =>
+            prev ? { ...prev, activities: updated.activities, stats: updated.stats } : prev
+          );
+        }
+      }
+    } catch {
+      setHabitStates((prev) => ({ ...prev, [id]: !prev[id] }));
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-red-400">{error ?? "Failed to load dashboard."}</p>
+      </div>
+    );
+  }
+
+  const { user, stats, habits, goals, analytics, activities } = data;
+  const completedCount = Object.values(habitStates).filter(Boolean).length;
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Good morning, Arjun 👋
+          Good morning, {user.name.split(" ")[0]} 👋
         </h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-          {new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          {new Date().toLocaleDateString("en-IN", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
           {" · "}
-          <span className="text-[#6366F1] font-medium">{completedCount}/{totalHabits} habits done today</span>
+          <span className="text-[#6366F1] font-medium">
+            {completedCount}/{stats.totalHabits} habits done today
+          </span>
         </p>
       </div>
- 
+
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={Flame}
           label="Best Streak"
-          value="21 days"
-          sub="Meditation habit"
+          value={`${stats.bestStreak} days`}
+          sub={stats.bestStreakHabit}
           iconBg="bg-orange-100 dark:bg-orange-900/20 text-orange-500"
         />
         <StatCard
           icon={CheckSquare}
           label="Today's Habits"
-          value={`${completedCount}/${totalHabits}`}
+          value={`${completedCount}/${stats.totalHabits}`}
           sub="Keep it up!"
           iconBg="bg-emerald-100 dark:bg-emerald-900/20 text-emerald-500"
         />
         <StatCard
           icon={Target}
           label="Active Goals"
-          value={`${goals.length}`}
-          sub="2 close to completion"
+          value={`${stats.activeGoals}`}
+          sub={`${stats.closeToCompletion} close to completion`}
           iconBg="bg-indigo-100 dark:bg-indigo-900/20 text-indigo-500"
         />
         <StatCard
           icon={Zap}
-          label="Productivity"
-          value="84%"
-          sub="+12% vs last week"
+          label="Habit Rate"
+          value={
+            stats.totalHabits > 0
+              ? `${Math.round((completedCount / stats.totalHabits) * 100)}%`
+              : "—"
+          }
+          sub="Today's completion rate"
           iconBg="bg-violet-100 dark:bg-violet-900/20 text-violet-500"
         />
       </div>
- 
+
       {/* Analytics row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <AnalyticsCard
-          title="Weekly Productivity"
-          subtitle="Hours focused per day"
-          total={49}
-          change={12}
-          data={weeklyProductivity}
-        />
-        <AnalyticsCard
           title="Habit Completions"
-          subtitle="Habits done per day"
-          total={31}
-          change={8}
-          data={weeklyHabits}
+          subtitle="Habits done per day this week"
+          total={analytics.weeklyHabits.reduce((s, d) => s + d.value, 0)}
+          change={0}
+          data={analytics.weeklyHabits}
         />
       </div>
- 
+
       {/* Habits */}
       <div>
         <SectionHeader title="Today's Habits" actionLabel="Add habit" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {habits.map((habit) => (
-            <HabitCard
-              key={habit.id}
-              {...habit}
-              completed={habitStates[habit.id]}
-              onToggle={() => toggleHabit(habit.id)}
-            />
-          ))}
-        </div>
+        {habits.length === 0 ? (
+          <p className="text-sm text-gray-400">No habits yet. Add your first habit!</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {habits.map((habit) => (
+              <HabitCard
+                key={habit.id}
+                {...habit}
+                completed={habitStates[habit.id] ?? habit.completed}
+                onToggle={() => toggleHabit(habit.id)}
+              />
+            ))}
+          </div>
+        )}
       </div>
- 
+
       {/* Goals + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <SectionHeader title="Active Goals" actionLabel="Add goal" />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {goals.map((goal) => (
-              <GoalCard key={goal.id} {...goal} />
-            ))}
-          </div>
+          {goals.length === 0 ? (
+            <p className="text-sm text-gray-400">No goals yet. Add your first goal!</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {goals.map((goal) => (
+                <GoalCard key={goal.id} {...goal} />
+              ))}
+            </div>
+          )}
         </div>
- 
+
         <div>
           <SectionHeader title="Activity" />
           <ActivityFeed activities={activities} />
