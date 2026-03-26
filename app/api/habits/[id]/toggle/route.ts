@@ -7,7 +7,7 @@ import { getSessionUser } from "@/lib/session";
 // PATCH /api/habits/[id]/toggle — mark habit done/undone for today
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // <-- Updated type
 ) {
   try {
     const user = await getSessionUser(req);
@@ -15,9 +15,11 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
     }
 
+    const { id } = await params; // <-- Await the params in Next.js 15!
+
     await connectDB();
 
-    const habit = await Habit.findOne({ _id: params.id, userId: user.id });
+    const habit = await Habit.findOne({ _id: id, userId: user.id });
     if (!habit) {
       return NextResponse.json({ error: "Habit not found." }, { status: 404 });
     }
