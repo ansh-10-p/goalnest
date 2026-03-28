@@ -19,14 +19,27 @@ interface Habit {
   completed: boolean;
 }
 
+interface Milestone {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 interface Goal {
   id: string;
   title: string;
   description: string;
-  percentage: number;
+  // API returns `progress`; old shape used `percentage` — support both
+  progress?: number;
+  percentage?: number;
   daysLeft: number;
   category: string;
-  color: "indigo" | "violet" | "emerald" | "amber";
+  // New API fields
+  priority?: "critical" | "high" | "medium" | "low";
+  milestones?: Milestone[];
+  deadline?: string;
+  // Legacy field
+  color?: "indigo" | "violet" | "emerald" | "amber";
 }
 
 interface Activity {
@@ -58,17 +71,9 @@ interface DashboardData {
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
 function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  iconBg,
+  icon: Icon, label, value, sub, iconBg,
 }: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-  sub: string;
-  iconBg: string;
+  icon: React.ElementType; label: string; value: string; sub: string; iconBg: string;
 }) {
   return (
     <div className="bg-white dark:bg-[#111827] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-200">
@@ -87,13 +92,9 @@ function StatCard({
 // ─── Section Header ───────────────────────────────────────────────────────────
 
 function SectionHeader({
-  title,
-  actionLabel,
-  onAction,
+  title, actionLabel, onAction,
 }: {
-  title: string;
-  actionLabel?: string;
-  onAction?: () => void;
+  title: string; actionLabel?: string; onAction?: () => void;
 }) {
   return (
     <div className="flex items-center justify-between mb-4">
@@ -119,7 +120,6 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [habitStates, setHabitStates] = useState<Record<string, boolean>>({});
 
-  // Fetch dashboard data
   useEffect(() => {
     async function fetchDashboard() {
       try {
@@ -139,18 +139,13 @@ export default function DashboardPage() {
     fetchDashboard();
   }, []);
 
-  // Toggle habit and sync with backend
   const toggleHabit = async (id: string) => {
-    // Optimistic update
     setHabitStates((prev) => ({ ...prev, [id]: !prev[id] }));
-
     try {
       const res = await fetch(`/api/habits/${id}/toggle`, { method: "PATCH" });
       if (!res.ok) {
-        // Revert on failure
         setHabitStates((prev) => ({ ...prev, [id]: !prev[id] }));
       } else {
-        // Refresh activity feed silently
         const dashRes = await fetch("/api/dashboard");
         if (dashRes.ok) {
           const updated: DashboardData = await dashRes.json();
@@ -185,6 +180,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
+
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -192,10 +188,7 @@ export default function DashboardPage() {
         </h1>
         <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
           {new Date().toLocaleDateString("en-IN", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
+            weekday: "long", year: "numeric", month: "long", day: "numeric",
           })}
           {" · "}
           <span className="text-[#6366F1] font-medium">
@@ -207,34 +200,26 @@ export default function DashboardPage() {
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={Flame}
-          label="Best Streak"
-          value={`${stats.bestStreak} days`}
-          sub={stats.bestStreakHabit}
+          icon={Flame} label="Best Streak"
+          value={`${stats.bestStreak} days`} sub={stats.bestStreakHabit}
           iconBg="bg-orange-100 dark:bg-orange-900/20 text-orange-500"
         />
         <StatCard
-          icon={CheckSquare}
-          label="Today's Habits"
-          value={`${completedCount}/${stats.totalHabits}`}
-          sub="Keep it up!"
+          icon={CheckSquare} label="Today's Habits"
+          value={`${completedCount}/${stats.totalHabits}`} sub="Keep it up!"
           iconBg="bg-emerald-100 dark:bg-emerald-900/20 text-emerald-500"
         />
         <StatCard
-          icon={Target}
-          label="Active Goals"
+          icon={Target} label="Active Goals"
           value={`${stats.activeGoals}`}
           sub={`${stats.closeToCompletion} close to completion`}
           iconBg="bg-indigo-100 dark:bg-indigo-900/20 text-indigo-500"
         />
         <StatCard
-          icon={Zap}
-          label="Habit Rate"
-          value={
-            stats.totalHabits > 0
-              ? `${Math.round((completedCount / stats.totalHabits) * 100)}%`
-              : "—"
-          }
+          icon={Zap} label="Habit Rate"
+          value={stats.totalHabits > 0
+            ? `${Math.round((completedCount / stats.totalHabits) * 100)}%`
+            : "—"}
           sub="Today's completion rate"
           iconBg="bg-violet-100 dark:bg-violet-900/20 text-violet-500"
         />
@@ -279,7 +264,19 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {goals.map((goal) => (
-                <GoalCard key={goal.id} {...goal} />
+                <GoalCard
+                  key={goal.id}
+                  id={goal.id}
+                  title={goal.title}
+                  description={goal.description}
+                  progress={goal.progress ?? goal.percentage ?? 0}
+                  daysLeft={goal.daysLeft}
+                  category={goal.category}
+                  priority={goal.priority}
+                  milestones={goal.milestones ?? []}
+                  deadline={goal.deadline}
+                  color={goal.color}
+                />
               ))}
             </div>
           )}
